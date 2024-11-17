@@ -622,7 +622,7 @@ void print_hashes_from_file(const char *filename, size_t num_hashes)
 
 int load_config(const char *config_filename,
                 char *approach,
-                unsigned long long *file_size_bytes,
+                unsigned long long *K,
                 unsigned long long *num_buckets,
                 unsigned long long *bucket_size,
                 int *prefix_size,
@@ -654,9 +654,9 @@ int load_config(const char *config_filename,
                 }
             }
         }
-        else if (strncmp(line, "FILESIZE_byte=", 14) == 0)
+        else if (strncmp(line, "K=", 2) == 0)
         {
-            *file_size_bytes = strtoull(line + 14, NULL, 10);
+            *K = atoi(line + 12);
         }
         else if (strncmp(line, "NUM_BUCKETS=", 12) == 0)
         {
@@ -779,11 +779,11 @@ int lookup_hash(FILE *data_file, const uint8_t *target_hash, const size_t target
 int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size_t number_lookups, const size_t hash_length)
 {
     // Variables to hold configuration values
-    unsigned long long file_size_bytes, num_buckets, bucket_size;
-    int prefix_size, nonce_size;
+    unsigned long long num_buckets, bucket_size;
+    int K, prefix_size, nonce_size;
 
     // Load the configuration from file
-    if (load_config(config_filename, NULL, &file_size_bytes, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
+    if (load_config(config_filename, NULL, &K, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
     {
         fprintf(stderr, "Failed to load configuration.\n");
         return -1;
@@ -791,7 +791,13 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
 
     // Seed the random number generator
     srand(time(NULL));
-    FILE *lookup_times_file = fopen("lookup_times.csv", "a");
+
+    char lookup_times_filename[50]; // Buffer to hold the generated filename
+
+    // Create the filename with 'k' included
+    sprintf(lookup_times_filename, "lookup_times%d.csv", K);
+
+    FILE *lookup_times_file = fopen(lookup_times_filename, "a");
     if (lookup_times_file == NULL)
     {
         perror("Error opening lookup times file");
@@ -1031,8 +1037,8 @@ int main(int argc, char *argv[])
     if (LOOKUP && FILENAME_FINAL != NULL)
     {
         // Variables to hold configuration values
-        unsigned long long file_size_bytes, num_buckets, bucket_size;
-        int prefix_size, nonce_size;
+        unsigned long long num_buckets, bucket_size;
+        int K, prefix_size, nonce_size;
 
         char *config_filename = concat_strings(FILENAME_FINAL, ".config");
         printf("Starting lookup for hash: %s\n", target_hash_hex);
@@ -1046,7 +1052,7 @@ int main(int argc, char *argv[])
         }
 
         // Load the configuration from file
-        if (load_config(config_filename, NULL, &file_size_bytes, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
+        if (load_config(config_filename, NULL, &K, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
         {
             fprintf(stderr, "Failed to load configuration.\n");
             return -1;
@@ -1152,7 +1158,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         fprintf(config_file, "APPROACH=%s\n", approach);
-        fprintf(config_file, "FILESIZE_byte=%lld\n", file_size_bytes);
+        fprintf(config_file, "K=%lld\n", K);
         fprintf(config_file, "NUM_BUCKETS=%lld\n", num_buckets);
         fprintf(config_file, "BUCKET_SIZE=%lld\n", num_records_in_bucket * rounds);
         fprintf(config_file, "PREFIX_SIZE=%d\n", PREFIX_SIZE);
