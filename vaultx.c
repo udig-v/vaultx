@@ -622,7 +622,7 @@ void print_hashes_from_file(const char *filename, size_t num_hashes)
 
 int load_config(const char *config_filename,
                 char *approach,
-                unsigned long long *K,
+                int *K,
                 unsigned long long *num_buckets,
                 unsigned long long *bucket_size,
                 int *prefix_size,
@@ -1158,7 +1158,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         fprintf(config_file, "APPROACH=%s\n", approach);
-        fprintf(config_file, "K=%lld\n", K);
+        fprintf(config_file, "K=%d\n", K);
         fprintf(config_file, "NUM_BUCKETS=%lld\n", num_buckets);
         fprintf(config_file, "BUCKET_SIZE=%lld\n", num_records_in_bucket * rounds);
         fprintf(config_file, "PREFIX_SIZE=%d\n", PREFIX_SIZE);
