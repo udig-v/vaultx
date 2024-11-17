@@ -656,7 +656,7 @@ int load_config(const char *config_filename,
         }
         else if (strncmp(line, "K=", 2) == 0)
         {
-            *K = atoi(line + 12);
+            *K = atoi(line + 2);
         }
         else if (strncmp(line, "NUM_BUCKETS=", 12) == 0)
         {
