@@ -680,22 +680,8 @@ int load_config(const char *config_filename,
     return 0;
 }
 
-int lookup_hash(const char *config_filename, FILE *data_file, const uint8_t *target_hash, const size_t target_hash_size)
+int lookup_hash(FILE *data_file, const uint8_t *target_hash, const size_t target_hash_size, const unsigned long long num_buckets, const unsigned long long bucket_size, const int prefix_size, const int nonce_size)
 {
-    // Variables to hold configuration values
-    unsigned long long file_size_bytes, num_buckets, bucket_size;
-    int prefix_size, nonce_size;
-
-    // Load the configuration from file
-    if (load_config(config_filename, NULL, &file_size_bytes, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
-    {
-        fprintf(stderr, "Failed to load configuration.\n");
-        return -1;
-    }
-
-    if (DEBUG)
-        printf("Loaded configuration: %llu, %llu, %llu, %d, %d\n", file_size_bytes, num_buckets, bucket_size, prefix_size, nonce_size);
-
     // Calculate the bucket index for the target hash
     off_t bucket_index = byteArrayToLongLong(target_hash, prefix_size); // Function extracts the prefix_size from hash and converts to long long to get the index of bucket
 
@@ -792,6 +778,17 @@ int lookup_hash(const char *config_filename, FILE *data_file, const uint8_t *tar
 
 int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size_t number_lookups, const size_t hash_length)
 {
+    // Variables to hold configuration values
+    unsigned long long file_size_bytes, num_buckets, bucket_size;
+    int prefix_size, nonce_size;
+
+    // Load the configuration from file
+    if (load_config(config_filename, NULL, &file_size_bytes, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
+    {
+        fprintf(stderr, "Failed to load configuration.\n");
+        return -1;
+    }
+
     // Seed the random number generator
     srand(time(NULL));
     FILE *lookup_times_file = fopen("lookup_times.csv", "a");
@@ -800,7 +797,6 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
         perror("Error opening lookup times file");
         return -1;
     }
-    // fprintf(lookup_times_file, "hash_length,lookup_time\n");
 
     for (size_t i = 0; i < number_lookups; i++)
     {
@@ -828,7 +824,7 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
 
         double start_lookup_time = omp_get_wtime();
 
-        if (lookup_hash(config_filename, data_file, target_hash, hash_length) == -1)
+        if (lookup_hash(data_file, target_hash, hash_length, num_buckets, bucket_size, prefix_size, nonce_size) == -1)
         {
             fprintf(stderr, "Error: Lookup failed for hash with length %zu.\n", hash_length);
             for (size_t i = 0; i < hash_length; i++)
@@ -1034,6 +1030,10 @@ int main(int argc, char *argv[])
 
     if (LOOKUP && FILENAME_FINAL != NULL)
     {
+        // Variables to hold configuration values
+        unsigned long long file_size_bytes, num_buckets, bucket_size;
+        int prefix_size, nonce_size;
+
         char *config_filename = concat_strings(FILENAME_FINAL, ".config");
         printf("Starting lookup for hash: %s\n", target_hash_hex);
 
@@ -1045,8 +1045,15 @@ int main(int argc, char *argv[])
             return -1;
         }
 
+        // Load the configuration from file
+        if (load_config(config_filename, NULL, &file_size_bytes, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
+        {
+            fprintf(stderr, "Failed to load configuration.\n");
+            return -1;
+        }
+
         double start_lookup_time = omp_get_wtime();
-        lookup_hash(config_filename, data_file, target_hash_bytes, target_hash_size);
+        lookup_hash(data_file, target_hash_bytes, target_hash_size, num_buckets, bucket_size, prefix_size, nonce_size);
         double end_lookup_time = omp_get_wtime();
         double elapsed_lookup_time = end_lookup_time - start_lookup_time;
         printf("Lookup time: %.2f seconds\n", elapsed_lookup_time);
@@ -1073,13 +1080,10 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        double start_lookup_time = omp_get_wtime();
         batch_lookup_hashes(config_filename, data_file, num_lookups, hash_length);
-        double end_lookup_time = omp_get_wtime();
-        double elapsed_lookup_time = end_lookup_time - start_lookup_time;
-        printf("Overall batch lookup time: %.2f seconds\n", elapsed_lookup_time);
 
         free(config_filename);
+        fclose(data_file);
 
         return 0;
     }
