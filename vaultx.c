@@ -680,7 +680,7 @@ int load_config(const char *config_filename,
     return 0;
 }
 
-int lookup_hash(const char *config_filename, const char *data_filename, const uint8_t *target_hash, const size_t target_hash_size)
+int lookup_hash(const char *config_filename, FILE *data_file, const uint8_t *target_hash, const size_t target_hash_size)
 {
     // Variables to hold configuration values
     unsigned long long file_size_bytes, num_buckets, bucket_size;
@@ -714,14 +714,6 @@ int lookup_hash(const char *config_filename, const char *data_filename, const ui
     if (DEBUG)
         printf("Calculated bucket offset: %llu\n", bucket_offset);
 
-    // Open the data file containing nonces
-    FILE *data_file = fopen(data_filename, "rb");
-    if (data_file == NULL)
-    {
-        perror("Error opening data file");
-        return -1;
-    }
-
     // Move file pointer to the start of the required bucket
     if (fseek(data_file, bucket_offset, SEEK_SET) != 0)
     {
@@ -748,8 +740,6 @@ int lookup_hash(const char *config_filename, const char *data_filename, const ui
         fclose(data_file);
         return -1;
     }
-
-    fclose(data_file);
 
     // Iterate through records in the bucket in memory
     uint8_t generated_hash[target_hash_size];
@@ -797,42 +787,62 @@ int lookup_hash(const char *config_filename, const char *data_filename, const ui
         printf("Hash not found in the computed bucket.\n");
     }
 
-    return found ? 0 : -1;
+    return found ? 0 : 1; // 0 if hash is found; 1 if hash is not found
 }
 
-int batch_lookup_hashes(const char *config_filename, const char *data_filename, size_t number_lookups)
+int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size_t number_lookups, const size_t hash_length)
 {
     // Seed the random number generator
     srand(time(NULL));
-
-    // Define the target hash lengths
-    size_t hash_lengths[] = {3, 4, 5, 6, 7, 8, 16, 32};
-    size_t num_lengths = sizeof(hash_lengths) / sizeof(hash_lengths[0]);
-
-    for (size_t len_index = 0; len_index < num_lengths; len_index++)
+    FILE *lookup_times_file = fopen("lookup_times.csv", "a");
+    if (lookup_times_file == NULL)
     {
-        size_t target_length = hash_lengths[len_index];
+        perror("Error opening lookup times file");
+        return -1;
+    }
+    // fprintf(lookup_times_file, "hash_length,lookup_time\n");
 
-        for (size_t i = 0; i < number_lookups; i++)
+    for (size_t i = 0; i < number_lookups; i++)
+    {
+        MemoRecord record;
+        for (size_t j = 0; j < sizeof(record.nonce); j++)
         {
-            // Generate a random nonce to serve as input for the hash function
-            MemoRecord record;
-            for (size_t j = 0; j < sizeof(record.nonce); j++)
-            {
-                record.nonce[j] = rand() % 256;
-            }
-
-            // Generate a hash of the specified length from the nonce
-            uint8_t target_hash[target_length];
-            generateBlake3(target_hash, &record, NULL, target_length);
-
-            // Perform a lookup for the generated hash
-            if (lookup_hash(config_filename, data_filename, target_hash, target_length) != 0)
-            {
-                fprintf(stderr, "Error: Lookup failed for hash %zu with length %zu.\n", i, target_length);
-                return -1;
-            }
+            record.nonce[j] = rand() % 256;
         }
+
+        // Generate a hash of the specified length from the nonce
+        uint8_t target_hash[hash_length];
+        generateBlake3(target_hash, &record, NULL, hash_length);
+
+        // Debugging: Print the generated hash for comparison
+        if (DEBUG)
+        {
+            printf("Generated hash for nonce %u: ", record.nonce[0]);
+            printf("Generated hash: ");
+            for (size_t i = 0; i < hash_length; i++)
+            {
+                printf("%02x", target_hash[i]);
+            }
+            printf("\n");
+        }
+
+        double start_lookup_time = omp_get_wtime();
+
+        if (lookup_hash(config_filename, data_file, target_hash, hash_length) == -1)
+        {
+            fprintf(stderr, "Error: Lookup failed for hash with length %zu.\n", hash_length);
+            for (size_t i = 0; i < hash_length; i++)
+            {
+                printf("%02x", target_hash[i]);
+            }
+            printf("\n");
+            return -1;
+        }
+
+        double end_lookup_time = omp_get_wtime();
+        double elapsed_lookup_time = end_lookup_time - start_lookup_time;
+
+        fprintf(lookup_times_file, "%lu,%f\n", hash_length, elapsed_lookup_time);
     }
 
     return 0;
@@ -851,6 +861,7 @@ int main(int argc, char *argv[])
     char *FILENAME_FINAL = NULL; // Default output file name
     int num_records_to_print = 0;
     int num_lookups = 0;
+    int hash_length = 0;
 
     char *target_hash_hex = NULL; // To hold the user input as a string
     uint8_t *target_hash_bytes;   // To hold the converted binary hash
@@ -969,7 +980,29 @@ int main(int argc, char *argv[])
             LOOKUP = true;
             break;
         case 'L':
-            num_lookups = atoi(optarg);
+            // Ensure the `optarg` has a comma (delimiter) for two arguments
+            if (optarg == NULL || strchr(optarg, ',') == NULL)
+            {
+                fprintf(stderr, "Error: -L flag requires two arguments separated by a comma (e.g., -L 100,200).\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+
+            // Split `optarg` by comma
+            char *first_arg = strtok(optarg, ",");
+            char *second_arg = strtok(NULL, ",");
+
+            // Convert the split arguments to integers
+            num_lookups = atoi(first_arg);
+            hash_length = atoi(second_arg);
+
+            if (num_lookups <= 0 || hash_length <= 0)
+            {
+                fprintf(stderr, "Error: Both values for -L must be positive integers.\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+
             LOOKUP_BATCH = true;
             break;
         case 'v':
@@ -1004,11 +1037,21 @@ int main(int argc, char *argv[])
         char *config_filename = concat_strings(FILENAME_FINAL, ".config");
         printf("Starting lookup for hash: %s\n", target_hash_hex);
 
+        // Open the data file containing nonces
+        FILE *data_file = fopen(FILENAME_FINAL, "rb");
+        if (data_file == NULL)
+        {
+            perror("Error opening data file");
+            return -1;
+        }
+
         double start_lookup_time = omp_get_wtime();
-        lookup_hash(config_filename, FILENAME_FINAL, target_hash_bytes, target_hash_size);
+        lookup_hash(config_filename, data_file, target_hash_bytes, target_hash_size);
         double end_lookup_time = omp_get_wtime();
         double elapsed_lookup_time = end_lookup_time - start_lookup_time;
         printf("Lookup time: %.2f seconds\n", elapsed_lookup_time);
+
+        fclose(data_file);
 
         free(config_filename);
         free(target_hash_hex);
@@ -1020,13 +1063,21 @@ int main(int argc, char *argv[])
     if (LOOKUP_BATCH && FILENAME_FINAL != NULL)
     {
         char *config_filename = concat_strings(FILENAME_FINAL, ".config");
-        printf("Starting batch lookup for %ld hashes\n", BATCH_SIZE);
+        printf("Starting batch lookup for %d hashes\n", num_lookups);
+
+        // Open the data file containing nonces
+        FILE *data_file = fopen(FILENAME_FINAL, "rb");
+        if (data_file == NULL)
+        {
+            perror("Error opening data file");
+            return -1;
+        }
 
         double start_lookup_time = omp_get_wtime();
-        batch_lookup_hashes(config_filename, FILENAME_FINAL, num_lookups);
+        batch_lookup_hashes(config_filename, data_file, num_lookups, hash_length);
         double end_lookup_time = omp_get_wtime();
         double elapsed_lookup_time = end_lookup_time - start_lookup_time;
-        printf("Lookup time: %.2f seconds\n", elapsed_lookup_time);
+        printf("Overall batch lookup time: %.2f seconds\n", elapsed_lookup_time);
 
         free(config_filename);
 
