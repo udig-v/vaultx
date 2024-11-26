@@ -777,7 +777,7 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
     unsigned long long num_buckets, bucket_size;
     int K, prefix_size, nonce_size;
     int found = 0, notfound = 0;
-    double total_time; // Total time taken for all lookups
+    double total_time = 0.0; // Total time taken for all lookups
 
     // Load the configuration from file
     if (load_config(config_filename, NULL, &K, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
