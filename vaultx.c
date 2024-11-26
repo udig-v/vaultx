@@ -760,18 +760,13 @@ int lookup_hash(FILE *data_file, const uint8_t *target_hash, const size_t target
                 if (!found)
                 {
                     found = 1;
-                    printf("Hash found in bucket %ld, record %lu.\n", bucket_index, record_index);
+                    // printf("Hash found in bucket %ld, record %lu.\n", bucket_index, record_index);
                 }
             }
         }
     }
 
     free(bucket.records);
-
-    if (!found)
-    {
-        printf("Hash not found in the computed bucket.\n");
-    }
 
     return found ? 0 : 1; // 0 if hash is found; 1 if hash is not found
 }
@@ -781,6 +776,8 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
     // Variables to hold configuration values
     unsigned long long num_buckets, bucket_size;
     int K, prefix_size, nonce_size;
+    int found = 0, notfound = 0;
+    double total_time; // Total time taken for all lookups
 
     // Load the configuration from file
     if (load_config(config_filename, NULL, &K, &num_buckets, &bucket_size, &prefix_size, &nonce_size) != 0)
@@ -830,7 +827,9 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
 
         double start_lookup_time = omp_get_wtime();
 
-        if (lookup_hash(data_file, target_hash, hash_length, num_buckets, bucket_size, prefix_size, nonce_size) == -1)
+        int result = lookup_hash(data_file, target_hash, hash_length, num_buckets, bucket_size, prefix_size, nonce_size);
+
+        if (result == -1)
         {
             fprintf(stderr, "Error: Lookup failed for hash with length %zu.\n", hash_length);
             for (size_t i = 0; i < hash_length; i++)
@@ -840,12 +839,24 @@ int batch_lookup_hashes(const char *config_filename, FILE *data_file, const size
             printf("\n");
             return -1;
         }
+        else if (result == 0)
+        {
+            found++;
+        }
+        else
+        {
+            notfound++;
+        }
 
         double end_lookup_time = omp_get_wtime();
         double elapsed_lookup_time = end_lookup_time - start_lookup_time;
+        total_time += elapsed_lookup_time;
 
         fprintf(lookup_times_file, "%lu,%f\n", hash_length, elapsed_lookup_time);
     }
+
+    printf("Out of %zu lookups, %d hashes were found and %d hashes were not found.\n", number_lookups, found, notfound);
+    printf("Total time taken for all lookups: %f seconds. Average time for one lookup: %f seconds\n", total_time, total_time / number_lookups);
 
     return 0;
 }
