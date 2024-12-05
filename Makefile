@@ -4,7 +4,10 @@
 NAME=blake3
 #CC=llvm
 #CC=gcc
-CC=gcc-13
+CC=gcc-14
+CCP=g++-14
+XCC=/ssd-raid0/shared/xgcc/bin/xgcc
+
 CFLAGS=-O3 -DBLAKE3_USE_NEON=0 -Wall -Wextra -pedantic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -fvisibility=hidden
 #CFLAGS=-O3 -Wall -Wextra -pedantic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -fvisibility=hidden
 LDFLAGS=-lm -lpthread -pie -Wl,-z,relro,-z,now
@@ -86,13 +89,22 @@ vault_x86: vault.c blake3.c blake3_dispatch.c blake3_portable.c $(ASM_TARGETS)
 	$(CC) $(CFLAGS) $(EXTRAFLAGS) $^ -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vault $(LDFLAGS)
 
 vaultx_x86: vaultx.c blake3.c blake3_dispatch.c blake3_portable.c $(ASM_TARGETS)
-	$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) $(CFLAGS) $(EXTRAFLAGS) $^ -o $@ $(LDFLAGS) -fopenmp 
+	$(CCP) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) $(CFLAGS) $(EXTRAFLAGS) $^ -x c++ -std=c++17 -o vaultx $(LDFLAGS) -fopenmp -ltbb
+
+vaultx_x86_c: vaultx.c blake3.c blake3_dispatch.c blake3_portable.c $(ASM_TARGETS)
+	$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -I/usr/include $(CFLAGS) $(EXTRAFLAGS) $^ -o vaultx $(LDFLAGS) -fopenmp
+
+vaultx_x86_xgcc: vaultx.c blake3.c blake3_dispatch.c blake3_portable.c $(ASM_TARGETS)
+	$(XCC) -I/ssd-raid0/shared/xgcc/include/ -I/ssd-raid0/shared/xgcc/lib/gcc/x86_64-pc-linux-gnu/12.2.1/include/ -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) $(CFLAGS) $(EXTRAFLAGS) $^ -o $@ $(LDFLAGS) -fopenmp 
 
 vault_arm: vault.c blake3.c blake3_dispatch.c blake3_portable.c
 	$(CC) $(CFLAGS) $(EXTRAFLAGS) $^ -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vault $(LDFLAGS)
 
 vaultx_arm: vaultx.c blake3.c blake3_dispatch.c blake3_portable.c
-	$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) $(CFLAGS) $(EXTRAFLAGS) $^ -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vaultx $(LDFLAGS) -fopenmp 
+	$(CCP) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) $(CFLAGS) $(EXTRAFLAGS) $^ -x c++ -std=c++17 -o vaultx $(LDFLAGS) -fopenmp -ltbb 
+
+vaultx_arm_c: vaultx.c blake3.c blake3_dispatch.c blake3_portable.c
+	$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) $(CFLAGS) $(EXTRAFLAGS) $^ -o vaultx $(LDFLAGS) -fopenmp
 
 
 vault_mac: vault.c
@@ -101,7 +113,12 @@ vault_mac: vault.c
 
 vaultx_mac: vaultx.c
 #-D NONCE_SIZE=$(NONCE_SIZE) 
+	$(CCP) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -x c++ -std=c++17 -o vaultx vaultx.c -fopenmp -lblake3 -ltbb -O3  -I/opt/homebrew/opt/blake3/include -L/opt/homebrew/opt/blake3/lib -I/opt/homebrew/opt/tbb/include -L/opt/homebrew/opt/tbb/lib
+
+vaultx_mac_c: vaultx.c
+#-D NONCE_SIZE=$(NONCE_SIZE) 
 	$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vaultx vaultx.c -fopenmp -lblake3 -O3  -I/opt/homebrew/opt/blake3/include -L/opt/homebrew/opt/blake3/lib
+
 
 clean: 
 	rm -f $(NAME) vault vaultx vault_* vaultx_* *.o
