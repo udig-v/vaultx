@@ -4,8 +4,8 @@
 NAME=blake3
 #CC=llvm
 #CC=gcc
-CC=gcc-14
-CCP=g++-14
+CC=gcc-13
+CCP=g++-13
 XCC=/ssd-raid0/shared/xgcc/bin/xgcc
 
 CFLAGS=-O3 -DBLAKE3_USE_NEON=0 -Wall -Wextra -pedantic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -fvisibility=hidden
@@ -122,3 +122,4 @@ vaultx_mac_c: vaultx.c
 
 clean: 
 	rm -f $(NAME) vault vaultx vault_* vaultx_* *.o
+
