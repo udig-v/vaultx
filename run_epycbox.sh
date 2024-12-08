@@ -27,7 +27,7 @@ done
 
 make clean
 make vaultx_x86_c NONCE_SIZE=5
-for K in {33..40}
+for K in {32..40}
 do
 	#./vaultx -a for -t 4 -K $K -m 5120 -b 8192 -f /data-fast/varvara/vaultx$K.memo.tmp -g vaultx$K.memo
 	for hash_size in 3 4 5 6 7 8 16 32
