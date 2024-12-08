@@ -2,8 +2,7 @@ vaultx.memo
 vaultx.memo.config
 vaultx
 lookup_times.csv
-vaultx25.memo
-vaultx25.memo.config
+vaultx*.memo
 vaultx26.memo
 vaultx26.memo.config
 vaultx27.memo
