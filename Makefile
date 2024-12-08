@@ -122,3 +122,4 @@ vaultx_mac_c: vaultx.c
 
 clean: 
 	rm -f $(NAME) vault vaultx vault_* vaultx_* *.o
+
