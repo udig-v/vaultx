@@ -1,6 +1,6 @@
 #!/bin/bash
 
-csv_file="lookup_times_epycbox_ssd.csv"
+csv_file="lookup_times_epycbox_v2.csv"
 echo "K,Hash_Size,Average_Lookup_Time_ms" > $csv_file
 
 make clean
