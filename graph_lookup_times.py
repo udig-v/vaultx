@@ -3,13 +3,17 @@ import matplotlib.pyplot as plt
 
 # List of the CSV filenames for the machines
 csv_files = {
-    "epycbox": "lookup_times_epycbox.csv",
-    "opi5": "lookup_times_opi.csv",
-    "rpi5": "lookup_times_rpi.csv",
-    "epycbox_nvme": "lookup_times_epycbox_nvme.csv",
-    "opi5_nvme": "lookup_times_opi_nvme.csv",
-    "rpi5_nvme": "lookup_times_rpi_nvme.csv",
-    "epycbox_nvme1": "lookup_times_epycbox_nvme1.csv",
+    # "epycbox": "lookup_times_epycbox.csv",
+    # "epycbox_v2": "lookup_times_epycbox_v2.csv", 
+    # "opi5": "lookup_times_opi.csv",
+    # "rpi5": "lookup_times_rpi.csv",
+    # "epycbox_nvme": "lookup_times_epycbox_nvme.csv",
+    # "opi5_nvme": "lookup_times_opi_nvme.csv",
+    # "rpi5_nvme": "lookup_times_rpi_nvme.csv",
+    # "epycbox_nvme1": "lookup_times_epycbox_nvme1.csv",
+    # "epycbox_ssd_v2": "lookup_times_epycbox_ssd_v2.csv",
+    # "epycbox_ssd": "lookup_times_epycbox_ssd.csv",
+    "epycbox_nvme_v3": "lookup_times_epycbox_nvme_v3.csv",
 }
 
 # Define the colors for different hash sizes
@@ -24,7 +28,12 @@ for machine, file in csv_files.items():
     print(f"Machine: {machine}, Unique Hash_Size: {sorted(df['Hash_Size'].unique())}")
     
     # Identify drive type based on filename
-    drive_type = "NVMe Drives" if "nvme" in machine else "HDD Drives"
+    if "nvme" in machine:
+        drive_type = "NVMe Drives"
+    elif "ssd" in machine:
+        drive_type = "SSD Drives"
+    else:
+        drive_type = "HDD Drives"
     
     # Create a figure for each machine and drive type
     plt.figure(figsize=(12, 6))
@@ -51,7 +60,7 @@ for machine, file in csv_files.items():
     plt.ylabel("Average Lookup Time (ms)", fontsize=12)
     
     # Set x-axis ticks at every K value
-    plt.xticks(range(25, 41))  # Ensure ticks are placed at each K value (25 through 40)
+    plt.xticks(range(25, 38))  # Ensure ticks are placed at each K value (25 through 40)
     
     # Add a legend
     plt.legend(title="Hash Size", bbox_to_anchor=(1.05, 1), loc='upper left')
