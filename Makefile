@@ -4,9 +4,12 @@
 NAME=blake3
 #CC=llvm
 #CC=gcc
-CC=gcc-13
-CCP=g++-13
-XCC=/ssd-raid0/shared/xgcc/bin/xgcc
+CC=gcc-14
+CCP=g++-14
+#torus
+#XCC=/ssd-raid0/shared/xgcc/bin/xgcc
+#s8
+XCC=/home/wwang/xgcc/bin/xgcc
 
 CFLAGS=-O3 -DBLAKE3_USE_NEON=0 -Wall -Wextra -pedantic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -fvisibility=hidden
 #CFLAGS=-O3 -Wall -Wextra -pedantic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -fvisibility=hidden
@@ -119,7 +122,22 @@ vaultx_mac_c: vaultx.c
 #-D NONCE_SIZE=$(NONCE_SIZE) 
 	$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vaultx vaultx.c -fopenmp -lblake3 -O3  -I/opt/homebrew/opt/blake3/include -L/opt/homebrew/opt/blake3/lib
 
+fib_x86_x: fib.c
+	#$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vaultx vaultx.c -fopenmp -lblake3 -O3  -I/opt/homebrew/opt/blake3/include -L/opt/homebrew/opt/blake3/lib
+	#source /home/wwang/data/vault/vaultx/gsetup.sh
+	$(XCC) -v -da -Q -O3 -g -fopenmp -c -o fib-xgcc.o fib.c
+	$(XCC) -v -da -Q -O3 -g -fopenmp -o fib-xgcc fib-xgcc.o -lm
+
+fib_x86_c: fib.c
+	#$(CC) -DNONCE_SIZE=$(NONCE_SIZE) -DRECORD_SIZE=$(RECORD_SIZE) -o vaultx vaultx.c -fopenmp -lblake3 -O3  -I/opt/homebrew/opt/blake3/include -L/opt/homebrew/opt/blake3/lib
+	#source /home/wwang/data/vault/vaultx/setup.sh
+	$(CC) -v -da -Q -O3 -g -fopenmp -c -o fib-gcc.o fib.c
+	$(CC) -v -da -Q -O3 -g -fopenmp -o fib-gcc fib-gcc.o -lm
+
+
+fib_mac_c: fib.c
+	$(CC) -v -da -Q -O3 -g -fopenmp -c -o fib-gcc.o fib.c
+	$(CC) -v -da -Q -O3 -g -fopenmp -o fib-gcc fib-xgcc.o
 
 clean: 
-	rm -f $(NAME) vault vaultx vault_* vaultx_* *.o
-
+	rm -f $(NAME) vault vaultx vault_* vaultx_* *.o fib-*
