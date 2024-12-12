@@ -11,7 +11,7 @@ do
 	for K in {25..31}
 	do
 		./drop-all-caches.sh
-    		output=$(./vaultx -a for -t 64 -b 1000 -p $hash_size -g vaultx$K.memo)
+    	output=$(./vaultx -a for -t 64 -b 1000 -p $hash_size -g vaultx$K.memo)
 
 		avg_time=$(echo "$output" | grep -oP '(\d+\.\d+)(?= ms per lookup)')
 

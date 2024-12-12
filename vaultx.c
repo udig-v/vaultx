@@ -522,7 +522,6 @@ uint8_t *hexStringToByteArray(const char *hexString)
 long long search_memo_record(FILE *file, off_t bucketIndex, uint8_t *SEARCH_UINT8, size_t SEARCH_LENGTH, unsigned long long num_records_in_bucket_search, MemoRecord *buffer)
 {
     const int HASH_SIZE_SEARCH = 8;
-    // unsigned long long fRecord = -1;
     size_t records_read;
     unsigned long long foundRecord = -1;
     // Define the offset you want to seek to
@@ -548,8 +547,6 @@ long long search_memo_record(FILE *file, off_t bucketIndex, uint8_t *SEARCH_UINT
 #pragma omp for
             for (size_t i = 0; i < records_read; ++i)
             {
-                //++total_records;
-
                 // Check for cancellation
 #pragma omp cancellation point for
                 if (!found && is_nonce_nonzero(buffer[i].nonce, NONCE_SIZE))
@@ -565,19 +562,15 @@ long long search_memo_record(FILE *file, off_t bucketIndex, uint8_t *SEARCH_UINT
                     // print bucket contents
                     if (DEBUG)
                     {
-
                         printf("bucket[");
 
-                        // printf("Search hash prefix (UINT8): ");
                         for (size_t n = 0; n < PREFIX_SIZE; ++n)
                             printf("%02X", SEARCH_UINT8[n]);
                         printf("][%zu] = ", i);
 
-                        // printf("Current nonce: ");
                         for (size_t n = 0; n < NONCE_SIZE; ++n)
                             printf("%02X", buffer[i].nonce[n]);
                         printf(" => ");
-                        // printf("Current hash prefix: ");
                         for (size_t n = 0; n < HASH_SIZE_SEARCH; ++n)
                             printf("%02X", hash_output[n]);
                         printf("\n");
@@ -586,24 +579,12 @@ long long search_memo_record(FILE *file, off_t bucketIndex, uint8_t *SEARCH_UINT
                     // Compare the first PREFIX_SIZE bytes of the current hash to the previous hash prefix
                     if (memcmp(hash_output, SEARCH_UINT8, SEARCH_LENGTH) == 0)
                     {
-                        // Current hash's first PREFIX_SIZE bytes are equal to or greater than previous
-                        //++count_condition_met;
-                        // fRecord = buffer[i];
-                        // foundRecord = true;
-                        // return byteArrayToLongLong(buffer[i].nonce,NONCE_SIZE);
-                        // Signal cancellation
-
                         foundRecord = byteArrayToLongLong(buffer[i].nonce, NONCE_SIZE);
 
 #pragma omp atomic write
-
-                        // if (!DEBUG)
-                        //{
-
                         found = 1;
 
 #pragma omp cancel for
-                        //}
                     }
                     else
                     {
@@ -738,7 +719,6 @@ void search_memo_records(const char *filename, const char *SEARCH_STRING)
 // not sure if the search of more than PREFIX_LENGTH works
 void search_memo_records_batch(const char *filename, int num_lookups, int search_size)
 {
-
     // Seed the random number generator with the current time
     srand((unsigned int)time(NULL));
 
@@ -836,7 +816,7 @@ void search_memo_records_batch(const char *filename, int num_lookups, int search
     // else
     //	printf("no NONCE found for HASH prefix %s\n",SEARCH_STRING);
     if (!BENCHMARK)
-        printf("searched for %d lookups of %d bytes long, found %d, not found %d in %.2f seconds, %.2f ms per lookup\n", num_lookups, search_size, foundRecords, notFoundRecords, elapsed_time / 1000.0, elapsed_time / num_lookups);
+        printf("searched for %d lookups of %d bytes long, found %d, not found %d in %.2f seconds, %.4f ms per lookup\n", num_lookups, search_size, foundRecords, notFoundRecords, elapsed_time / 1000.0, elapsed_time / num_lookups);
     else
         printf("%s %d %zu %llu %llu %d %d %d %d %.2f %.2f\n", filename, NUM_THREADS, filesize, num_buckets_search, num_records_in_bucket_search, num_lookups, search_size, foundRecords, notFoundRecords, elapsed_time / 1000.0, elapsed_time / num_lookups);
     // return NULL;
@@ -1102,7 +1082,6 @@ int main(int argc, char *argv[])
             break;
         case 'm':
             MEMORY_SIZE_MB = atoi(optarg);
-            // MEMORY_SIZE_bytes_original = MEMORY_SIZE_MB * 1024 * 1024;
             if (MEMORY_SIZE_MB < 64)
             {
                 fprintf(stderr, "Memory size must be at least 64 MB.\n");
@@ -1224,7 +1203,6 @@ int main(int argc, char *argv[])
     double file_size_gb = file_size_bytes / (1024 * 1024 * 1024.0);
     unsigned long long MEMORY_SIZE_bytes = 0;
 
-    // if (MEMORY_SIZE_MB / 1024.0 > file_size_gb) {
     if (MEMORY_SIZE_MB * 1024 * 1024 > file_size_bytes)
     {
         MEMORY_SIZE_MB = (unsigned long long)(file_size_bytes / (1024 * 1024));
@@ -1243,8 +1221,6 @@ int main(int argc, char *argv[])
     file_size_bytes = MEMORY_SIZE_bytes * rounds;
     file_size_gb = file_size_bytes / (1024 * 1024 * 1024.0);
 
-    // MEMORY_SIZE_bytes
-
     MEMORY_SIZE_MB = (unsigned long long)(MEMORY_SIZE_bytes / (1024 * 1024));
 
     num_hashes = MEMORY_SIZE_bytes / NONCE_SIZE;
@@ -1262,7 +1238,6 @@ int main(int argc, char *argv[])
 
     if (!BENCHMARK)
     {
-
         if (SEARCH)
         {
             printf("SEARCH                      : true\n");
@@ -1421,7 +1396,6 @@ int main(int argc, char *argv[])
             else if (strcmp(approach, "for") == 0)
             {
 // Parallel For Loop Approach
-// #pragma omp parallel for schedule(dynamic)
 #pragma omp parallel for schedule(static)
                 for (unsigned long long i = start_idx; i < end_idx; i += BATCH_SIZE)
                 {
@@ -1490,9 +1464,7 @@ int main(int argc, char *argv[])
                     });
             }
 #endif
-
             // after else if
-
             // End hash computation time measurement
             end_time_hash = omp_get_wtime();
             elapsed_time_hash = end_time_hash - start_time_hash;
@@ -1517,17 +1489,11 @@ int main(int argc, char *argv[])
                 for (unsigned long long i = 0; i < num_buckets; i++)
                 {
                     bytesWritten += writeBucketToDiskSequential(&buckets[i], fd);
-                    // printf("writeBucketToDiskSequential(): %llu bytes\n",bytesWritten);
                 }
-
-                // printf("writeBucketToDiskSequential(): %llu bytes at offset %llu; num_hashes=%llu\n",bytesWritten,offset,num_hashes);
-
                 // End I/O time measurement
                 end_time_io = omp_get_wtime();
                 elapsed_time_io = end_time_io - start_time_io;
                 elapsed_time_io_total += elapsed_time_io;
-
-                // printf("%.2f MB/s\n", throughput_io);
             }
 
             // Calculate throughput (hashes per second)
@@ -1719,15 +1685,8 @@ int main(int argc, char *argv[])
                 {
                     for (unsigned long long r = 0; r < rounds; r++)
                     {
-
-                        // off_t index_src = s*num_records_in_bucket+r*num_records_in_bucket*rounds;
-                        // off_t index_dest = s + r*num_records_in_bucket*rounds;
-
                         off_t index_src = ((r * num_buckets_to_read + s) * num_records_in_bucket);
                         off_t index_dest = (s * rounds + r) * num_records_in_bucket;
-
-                        // printf("SHUFFLE: index_src=%llu index_dest=%llu\n",index_src,index_dest);
-                        // printf("SHUFFLE: s=%llu, r=%llu, index_src=%llu, index_dest=%llu\n", s, r, index_src, index_dest);
 
                         memcpy(&bufferShuffled[index_dest], &buffer[index_src], num_records_in_bucket * sizeof(MemoRecord));
                     }

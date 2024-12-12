@@ -1,81 +1,73 @@
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 
-# Define directories and files
-folders = ['hdd_lookup', 'nvme_lookup']
-file_range_hdd = range(25, 36)  # For HDD, lookup_times#.csv where # ranges from 25 to 35
-file_range_nvme = range(25, 36)  # For NVMe, lookup_times#.csv where # ranges from 25 to 35
-file_range_hdd_extra = [40]  # Only for HDD, we need to include file 40
-hash_sizes = [3, 4, 5, 6, 7, 8, 16, 32]
+# List of the CSV filenames for the machines
+csv_files = {
+    # "epycbox": "lookup_times_epycbox.csv",
+    # "epycbox_v2": "lookup_times_epycbox_v2.csv", 
+    # "opi5": "lookup_times_opi.csv",
+    # "rpi5": "lookup_times_rpi.csv",
+    # "epycbox_nvme": "lookup_times_epycbox_nvme.csv",
+    # "opi5_nvme": "lookup_times_opi_nvme.csv",
+    # "rpi5_nvme": "lookup_times_rpi_nvme.csv",
+    # "epycbox_nvme1": "lookup_times_epycbox_nvme1.csv",
+    # "epycbox_ssd_v2": "lookup_times_epycbox_ssd_v2.csv",
+    # "epycbox_ssd": "lookup_times_epycbox_ssd.csv",
+    "epycbox_nvme_v3": "lookup_times_epycbox_nvme_v3.csv",
+}
 
-# Dictionary to hold all data
-data = {folder: {} for folder in folders}
+# Define the colors for different hash sizes
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
 
-# Read data from CSV files
-for folder in folders:
-    # Determine correct file range based on the folder
-    if folder == 'hdd_lookup':
-        file_range = list(file_range_hdd) + file_range_hdd_extra  # Include file 40 for HDD
-    else:
-        file_range = file_range_nvme  # Use 25-35 for NVMe
+# Iterate over each machine and its corresponding CSV file
+for machine, file in csv_files.items():
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv(file)
     
-    for i in file_range:
-        file_path = os.path.join(folder, f"lookup_times{i}.csv")
-        if not os.path.exists(file_path):  # Skip if file doesn't exist
-            print(f"File {file_path} not found. Skipping.")
-            continue  # Skip to the next file
+    # Debug: Print unique Hash_Size values in the dataset
+    print(f"Machine: {machine}, Unique Hash_Size: {sorted(df['Hash_Size'].unique())}")
+    
+    # Identify drive type based on filename
+    if "nvme" in machine:
+        drive_type = "NVMe Drives"
+    elif "ssd" in machine:
+        drive_type = "SSD Drives"
+    else:
+        drive_type = "HDD Drives"
+    
+    # Create a figure for each machine and drive type
+    plt.figure(figsize=(12, 6))
+    
+    # Sort the Hash_Size values for consistent ordering
+    hash_sizes = sorted(df['Hash_Size'].unique())
+    
+    # Plot the bar graph for each k-value and hash size
+    for i, hash_size in enumerate(hash_sizes):
+        data = df[df['Hash_Size'] == hash_size]
         
-        try:
-            # Read CSV without headers
-            df = pd.read_csv(file_path, header=None)
-            df.columns = ['hash_size', 'lookup_time']  # Assign column names explicitly
-            
-            # Convert lookup time from seconds to milliseconds
-            df['lookup_time'] = df['lookup_time'] * 1000  # Conversion to ms
-            
-            # Initialize a dictionary for this file if not already done
-            data[folder][i] = {size: [] for size in hash_sizes}
-            
-            for size in hash_sizes:
-                # Filter rows for the current hash size
-                size_data = df[df['hash_size'] == size]['lookup_time']
-                data[folder][i][size].extend(size_data)
-        except Exception as e:
-            print(f"Error reading {file_path}: {e}")
-
-# Plot the data
-for folder in folders:
-    plt.figure(figsize=(14, 8))
+        # Safeguard against out-of-range color indices
+        color_index = i % len(colors)
+        
+        # Offset bars sequentially
+        offset = 0.1 * i
+        
+        plt.bar(data['K'] + offset, data['Average_Lookup_Time_ms'], width=0.1, 
+                label=f'Hash Size {hash_size}', color=colors[color_index])
     
-    # Determine correct file range based on the folder
-    if folder == 'hdd_lookup':
-        file_range = list(file_range_hdd) + file_range_hdd_extra  # Include file 40 for HDD
-    else:
-        file_range = file_range_nvme  # Use 25-35 for NVMe
+    # Set the title and labels
+    plt.title(f"{machine.capitalize()} - {drive_type}", fontsize=14)
+    plt.xlabel("K Value", fontsize=12)
+    plt.ylabel("Average Lookup Time (ms)", fontsize=12)
     
-    # Prepare data for bar chart
-    bar_width = 0.1  # Width of each bar
-    x_positions = np.arange(len(file_range))  # Base X positions for file sizes
-    offsets = np.linspace(-0.35, 0.35, len(hash_sizes))  # Bar offsets for hash sizes
+    # Set x-axis ticks at every K value
+    plt.xticks(range(25, 38))  # Ensure ticks are placed at each K value (25 through 40)
     
-    for offset, size in zip(offsets, hash_sizes):
-        avg_lookup_times = [
-            sum(data[folder][file_id][size]) / len(data[folder][file_id][size]) if data[folder][file_id][size] else 0
-            for file_id in file_range
-        ]
-        plt.bar(x_positions + offset, avg_lookup_times, bar_width, label=f'Hash Size {size}')
+    # Add a legend
+    plt.legend(title="Hash Size", bbox_to_anchor=(1.05, 1), loc='upper left')
     
-    # Customize the plot
-    plt.title(f"Lookup Times by File Size and Hash Size ({folder})", fontsize=16)
-    plt.xlabel("File Size (25-35, 40 for HDD)", fontsize=14)  # Updated file size range on X-axis
-    plt.ylabel("Average Lookup Time (ms)", fontsize=14)
-    plt.xticks(x_positions, [str(i) for i in file_range], fontsize=12)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.legend(fontsize=10, title="Hash Sizes")
+    # Adjust layout for better spacing
     plt.tight_layout()
+    
+    # Save the plot for the current machine and drive type
+    plt.savefig(f"graph_{machine}_{drive_type}.svg")
 
-    # Save and show the plot
-    plt.savefig(f"{folder}_lookup_times_bar_graph.png")
-    plt.show()
