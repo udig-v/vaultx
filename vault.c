@@ -1609,7 +1609,7 @@ int main(int argc, char *argv[])
 		case 'l':
 			// Get the length of the prefix
 			prefixLength = atoi(optarg);
-			if (prefixLength <= 0 || prefixLength > 10)
+			if (prefixLength <= 0 || prefixLength > 32)
 			{
 				printf("Invalid prefix length\n");
 				return 1;

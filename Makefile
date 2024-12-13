@@ -4,7 +4,7 @@
 NAME=blake3
 #CC=llvm
 #CC=gcc
-CC=gcc-13
+CC=gcc
 CCP=g++-13
 #torus
 #XCC=/ssd-raid0/shared/xgcc/bin/xgcc
