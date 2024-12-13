@@ -2157,7 +2157,7 @@ int main(int argc, char *argv[])
 
 		// Get the length of the prefix
 		// size_t prefixLength = atoi(argv[2]);
-		if (prefixLength <= 0 || prefixLength > 10)
+		if (prefixLength <= 0 || prefixLength > 32)
 		{
 			printf("Invalid prefix length\n");
 			return 1;
