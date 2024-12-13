@@ -4,3 +4,5 @@ vaultx
 lookup_times.csv
 vaultx*.memo
 vault
+vault*.memo
+vault*.memo.config

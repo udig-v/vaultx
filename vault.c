@@ -2370,9 +2370,7 @@ int main(int argc, char *argv[])
 				notfound++;
 			}
 		}
-
 		// Get end time
-		// clock_gettime(CLOCK_MONOTONIC, &end);
 
 		// Calculate elapsed time in microseconds
 		// elapsedTime = (end.tv_sec - start.tv_sec) * 1e6 + (end.tv_nsec - start.tv_nsec) / 1e3;
@@ -2392,7 +2390,6 @@ int main(int argc, char *argv[])
 	// hash generation
 	else
 	{
-
 		int fd = -1;
 		double last_progress_update = 0.0;
 		long long last_progress_i = 0;
