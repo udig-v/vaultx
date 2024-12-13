@@ -627,7 +627,6 @@ long long search_memo_record(FILE *file, off_t bucketIndex, uint8_t *SEARCH_UINT
 // not sure if the search of more than PREFIX_LENGTH works
 void search_memo_records(const char *filename, const char *SEARCH_STRING)
 {
-
     uint8_t *SEARCH_UINT8 = hexStringToByteArray(SEARCH_STRING);
     size_t SEARCH_LENGTH = strlen(SEARCH_STRING) / 2;
     off_t bucketIndex = getBucketIndex(SEARCH_UINT8, PREFIX_SIZE);
