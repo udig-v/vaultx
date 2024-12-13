@@ -1091,6 +1091,7 @@ void printUsage()
 	printf("Usage: ./vault -f <filename> -p 10\n");
 	printf("Usage: ./vault -f <filename> -v true\n");
 	printf("Usage: ./vault -f <filename> -b 10\n");
+	printf("Usage: ./vault -f <filename> -k <k_value> -c <num_lookups> -l <prefix_size>");
 }
 
 void printHelp()
@@ -1429,19 +1430,12 @@ void *sortBucket(void *args)
 
 int main(int argc, char *argv[])
 {
-	// assumes both values are set to false initially
-	// littleEndian = isLittleEndian();
-	// littleEndian = false;
-	// printf("littleEndian=%s\n",littleEndian ? "true" : "false");
-
 	Timer timer;
 	double elapsedTime;
 	double elapsedTimeHashGen = 0;
 	double elapsedTimeSort;
 	double elapsedTimeSync;
 	double elapsedTimeCompress;
-
-	// struct timeval start_all_walltime, end_all_walltime;
 
 	char *FILENAME = NULL;		 // Default value
 	char *FILENAME_FINAL = NULL; // Default value
@@ -1598,7 +1592,6 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 			// Convert the hexadecimal hash from command-line argument to binary
-
 			targetHash = hexStringToByteArray(optarg, byteArray, sizeof(byteArray));
 			if (targetHash == NULL)
 			{
@@ -1612,8 +1605,6 @@ int main(int argc, char *argv[])
 				printBytes(byteArray, sizeof(byteArray));
 				printf("\n");
 			}
-
-			// printf("print_records=%lld\n", print_records);
 			break;
 		case 'l':
 			// Get the length of the prefix
@@ -1627,7 +1618,7 @@ int main(int argc, char *argv[])
 				printf("prefixLength=%zu\n", prefixLength);
 			break;
 		case 'c':
-			// Get the length of the prefix
+			// Get the number of lookups to perform
 			search_records = atoi(optarg);
 			if (search_records <= 0)
 			{
@@ -1636,6 +1627,7 @@ int main(int argc, char *argv[])
 			}
 			if (benchmark == false)
 				printf("search_records=%d\n", search_records);
+
 			break;
 		case 'x':
 			if (strcmp(optarg, "true") == 0)
@@ -2001,7 +1993,6 @@ int main(int argc, char *argv[])
 
 	if (verify_records)
 	{
-
 		resetTimer(&timer);
 		int VERIFY_BUFFER_SIZE = 1000000 - RECORD_SIZE;
 		int fd;
@@ -2157,6 +2148,7 @@ int main(int argc, char *argv[])
 	{
 		printf("searching for random hashes\n");
 		size_t numberLookups = search_records;
+
 		if (numberLookups <= 0)
 		{
 			printf("Invalid number of lookups\n");
@@ -2186,20 +2178,11 @@ int main(int argc, char *argv[])
 		int found = 0;
 		int notfound = 0;
 
-		// Timing variables
-		// struct timespec start, end;
-		// double elapsedTime;
-
-		// Get start time
-		// clock_gettime(CLOCK_MONOTONIC, &start);
 		resetTimer(&timer);
 
 		for (size_t searchNum = 0; searchNum < numberLookups; searchNum++)
 		{
-
-			// Convert the hexadecimal hash from command-line argument to binary
-			// char hexString[length * 2 + 1];
-
+			// Generate a hash to search for
 			uint8_t byteArray[HASH_SIZE];
 			for (size_t i = 0; i < HASH_SIZE; ++i)
 			{
@@ -2212,6 +2195,13 @@ int main(int argc, char *argv[])
 				printf("Error: Byte array too small\n");
 				return 1;
 			}
+			// Print the target hash
+			// printf("Target Hash %zu: ", searchNum + 1);
+			// for (size_t i = 0; i < HASH_SIZE; ++i)
+			// {
+			// 	printf("%02x", targetHash[i]); // Print each byte in hexadecimal
+			// }
+			// printf("\n");
 
 			// Perform binary search
 			int index = binarySearch(targetHash, prefixLength, fd, filesize, &seekCount, true);
@@ -2263,9 +2253,6 @@ int main(int argc, char *argv[])
 				// printf("Prefix length: %zu\n", prefixLength);
 			}
 		}
-
-		// Get end time
-		// clock_gettime(CLOCK_MONOTONIC, &end);
 
 		// Calculate elapsed time in microseconds
 		// elapsedTime = (end.tv_sec - start.tv_sec) * 1e6 + (end.tv_nsec - start.tv_nsec) / 1e3;
