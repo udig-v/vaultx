@@ -1,0 +1,5 @@
+K,RAM,HASH,SORT,FLUSH,COMPRESS,TOTAL
+33,16384,47.416,79.209,0.613,0.000,127.238
+34,16384,574.074,1087.112,0.738,0.000,1661.924
+35,16384,no valid configuration found... this should never happen
+exiting...
